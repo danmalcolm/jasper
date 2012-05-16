@@ -2,7 +2,7 @@
 
 ## Introduction
 
-Jasper is a JavaScript parser framework in JavaScript. It allows you to define a parser directly in JavaScript code, which can then be used to consume text input.
+Jasper is a JavaScript parser micro-framework. It allows you to define a parser directly in JavaScript code, which can then be used to consume text input.
 
 This started out as a port of the extremely clever Sprache Tiny C# Parser Framework http://code.google.com/p/sprache/. I thought it would be a useful way to get 
 my head around its functional compositional magic.
