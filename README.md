@@ -67,4 +67,4 @@ var xmlParser = (function () {
 	
 ## License
 
-NHQueryRecorder is ©2012 Dan Malcolm and contributors under the BSD license. See https://github.com/danmalcolm/Jasper/blob/master/LICENCE.txt.
+Jasper is ©2012 Dan Malcolm and contributors under the BSD license. See https://github.com/danmalcolm/Jasper/blob/master/LICENCE.txt.
