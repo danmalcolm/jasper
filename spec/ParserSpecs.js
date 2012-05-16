@@ -147,6 +147,20 @@ describe("Parsing", function () {
 
 		});
 
+		describe("when parsing using parser obtained from function", function () {
+			var parser = parse.ref(function () { return parse.char('a'); });
+
+			it("should succeed with valid input", function () {
+				expect(parser).toSucceed("a", "a");
+			});
+
+			it("should fail with valid input", function () {
+				expect(parser).toFail("X");
+			});
+
+		});
+
+
 	});
 
 	describe("combinator methods", function () {
@@ -295,7 +309,7 @@ describe("Parsing", function () {
 
 			});
 
-			describe("when parsing using sequence of parsers and projecting result from values", function () {
+			describe("when parsing using sequence of parsers and projecting result from values using function", function () {
 				var parser = parse.sequence([parse.char("["), parse.digit(), parse.char("]")],
           function (opening, digit, closing) {
           	return digit;
@@ -303,6 +317,24 @@ describe("Parsing", function () {
 
 				it("should succeed with expected input, with projected result", function () {
 					expect(parser).toSucceed("[3]", "3");
+				});
+
+			});
+
+			describe("when parsing using sequence of parsers and selecting single result from values using index", function () {
+				var parser = parse.sequence([parse.char("["),parse.digit(),parse.char("]")], 1);
+
+				it("should succeed with expected input, with projected result", function () {
+					expect(parser).toSucceed("[3]", "3");
+				});
+
+			});
+
+			describe("when parsing using sequence of parsers and selecting subset of values using array of indices", function () {
+				var parser = parse.sequence([parse.char("["), parse.digit(), parse.char("]")], [1,2]);
+
+				it("should succeed with expected input, with projected result", function () {
+					expect(parser).toSucceed("[3]", ["3", "]"]);
 				});
 
 			});

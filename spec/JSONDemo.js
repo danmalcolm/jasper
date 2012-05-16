@@ -16,13 +16,11 @@ describe("JSON Demo", function () {
 		};
 
 		// parses variable, property or function name
-		var identifier = parse.letter()
-			.then(function (firstResult) {
-				return parse.letter().or(parse.digit()).or(parse.char('_')).many().text()
-				.map(function (rest) {
-					return firstResult.value + rest;
-				});
-			});
+		var identifier = parse.using(function () {
+			var first = parse.letter().once();
+			var rest = parse.letter().or(parse.digit()).or(parse.char('_')).many().text();
+			return parse.seq([first, rest]).text();
+		});
 
 		// parses escaped character sequence within a string - (Latin-1 \XXX \xXXX and unicode characters not supported, just a demo)
 		var escaped = parse.char('\\')
@@ -50,7 +48,7 @@ describe("JSON Demo", function () {
 
 		var value = parse.any(quotedString, number, parse.ref(function () { return object; }), parse.ref(function () { return array; }));
 
-		var property = parse.sequence([
+		var property = parse.seq([
 			identifier.or(quotedString).token(),
 			parse.char(":").token(),
 			value.token()
@@ -64,11 +62,9 @@ describe("JSON Demo", function () {
 				parse.char("[").token(),
 				value.separated(parse.char(',').token()),
 				parse.char(']').token()
-		], function (b1, values, b2) {
-			return values;
-		});
+		], 1);
 
-		var object = parse.sequence([
+		var object = parse.seq([
 			parse.char("{").named('start of object "{"').token(),
 			properties,
 			parse.char("}").named('end of object "}"').token()

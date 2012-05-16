@@ -13,6 +13,10 @@ var Jasper = (function () {
 			var str = toString.call(val);
 			return str == '[object String]';
 		},
+		number: function (val) {
+			var str = toString.call(val);
+			return str == '[object Number]';
+		},
 		fn: function (val) {
 			var str = toString.call(val);
 			return typeof (val) == 'function' || str == '[object Function]';
@@ -359,7 +363,7 @@ var Jasper = (function () {
 					function () { return "Unexpected character '" + input.current + "'"; },
 					function () { return [expectation]; });
 			});
-		}, 
+		},
 		anyChar: function () {
 			return parse.char(function () {
 				return true;
@@ -376,7 +380,7 @@ var Jasper = (function () {
 				throw new Error("Expected function or string");
 			}
 			return parse.char(test, expectation);
-		}, 
+		},
 		letter: function () {
 			return parse.char(function (c) {
 				return charUtil.isUpper(c) || charUtil.isLower(c);
@@ -446,11 +450,16 @@ var Jasper = (function () {
 			var parser = getParser(arguments[0]);
 			return parser.or.apply(parser, slice.call(arguments, 1));
 		},
-		// Executes a sequence of parsers, with an optional map function 
-		// that takes the sequence of results as arguments
+		// Executes a sequence of parsers, The optional map argument can be either:
+		// - a function that is called to get the resulting value. It will be called with
+		// the result of each parser in the sequence, each as a separate argument
+		// - a number specifying the index of a parser in the sequence. The result will be
+		// a single value in the result from this parser
+		// - an array, specifying the indices of parsers in the sequence. The result will be
+		// an array containing the values returned by these parses
 		sequence: function (parsers, map) {
-			var parser, current;
-			for (var i = 0, l = parsers.length; i < l; i++) {
+			var parser, current, i, l;
+			for (i = 0, l = parsers.length; i < l; i++) {
 				current = getParser(parsers[i]);
 				if (!parser) {
 					parser = current.map(function (value) {
@@ -470,23 +479,48 @@ var Jasper = (function () {
 					parser = parser.then(func);
 				}
 			}
-			if (is.fn(map)) {
-				parser = parser.map(function (values) {
-					return map.apply(null, values);
-				});
+			// combine map function if specified
+			var fn;
+			if (map) {
+				if (is.fn(map)) {
+					fn = function (values) {
+						return map.apply(null, values);
+					};
+				} else if (is.number(map)) {
+					fn = function (values) {
+						return values[map];
+					};
+				} else if (is.array(map)) {
+					fn = function (values) {
+						var subset = [];
+						for (i = 0, l = map.length; i < l; i++)
+							subset.push(values[map[i]]);
+						return subset;
+					};
+				}
+				if (fn)
+					parser = parser.map(fn);
 			}
 			return parser;
 		},
-		// break circular dependencies
-		ref: function (reference) {
+		// Obtains parser by calling a function. Building the parser within a function can help when
+		// constructing more complex parsers, as local parser variables can be defined and combined.
+		// Delaying execution via a function also resolves interdependencies.
+		using: function (fn) {
 			var parser;
 			return createParser(function (input) {
-				parser = parser || (parser = reference());
+				parser = parser || (parser = fn());
 				var result = parser.parse(input);
 				return result;
 			});
 		}
 	});
+
+	// Aliases
+
+	// Uses a function to provide a reference to the parser
+	parse.ref = parse.using;
+	parse.seq = parse.sequence;
 
 	return {
 		parse: parse,

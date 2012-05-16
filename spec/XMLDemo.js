@@ -3,13 +3,15 @@ describe("XML Demo", function () {
 		var parse = Jasper.parse;
 
 		// valid node name
-		var identifier = parse.sequence([parse.letter().once(), parse.any(parse.letter(), parse.digit(), parse.char('_-')).many().text()]).text();
+		var identifier = parse.using(function() {
+			var first = parse.letter().once(),
+				rest = parse.any(parse.letter(), parse.digit(), parse.char('_-')).many().text();
+			return parse.sequence([first, rest]).text();
+		});
 
 		var ws = parse.whiteSpace().atLeastOnce();
 
-		var quotedContent = parse.sequence(['"', parse.charExcept('"').many().text(), '"'], function (open, content, close) {
-			return content;
-		});
+		var quotedContent = parse.sequence(['"', parse.charExcept('"').many().text(), '"'], 1);
 
 		var attribute = parse.sequence([identifier, '=', quotedContent], function (name, eq, value) {
 			return { name: name, value: value };
@@ -36,7 +38,7 @@ describe("XML Demo", function () {
 			});
 
 		var fullNode = parse.sequence([openingTag, childNodes], function (tag, children) {
-			return { name: tag.name,attributes: tag.attributes,childNodes: children };
+			return { name: tag.name, attributes: tag.attributes, childNodes: children };
 		})
 			.then(function (result) {
 				return closingTag(result.value.name).map(function (closing) {
@@ -55,7 +57,7 @@ describe("XML Demo", function () {
 		describe("self closing nodes", function () {
 
 			it("simple", function () {
-				expect(xmlParser).toSucceed('<test/>', { name: 'test', attributes: [], childNodes:[] });
+				expect(xmlParser).toSucceed('<test/>', { name: 'test', attributes: [], childNodes: [] });
 				expect(xmlParser).toSucceed('<test />', { name: 'test', attributes: [], childNodes: [] });
 			});
 
