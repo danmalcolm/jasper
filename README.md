@@ -13,7 +13,9 @@ Right now, this project is intended purely for fun and is not intended for use i
 
 Example of a basic XML parser:
 
-var xmlParser = (function () {
+```JavaScript
+
+	var xmlParser = (function () {
 	
 		var parse = Jasper.parse;
 
@@ -64,6 +66,7 @@ var xmlParser = (function () {
 	})();
 
 	var node = xmlParser.parse('<test a="123" b="456" />'); // gives us a node object with properties name, attributes and childNodes.
+```
 	
 ## License
 
