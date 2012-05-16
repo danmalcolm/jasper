@@ -5,7 +5,7 @@ describe("Parsing", function () {
 	describe("parsers", function () {
 
 		describe("when parsing single character by predicate", function () {
-			var parser = parse.character(function (x) { return x == "X"; }, "the letter X");
+			var parser = parse.char(function (x) { return x == "X"; }, "the letter X");
 
 			it("should succeed with valid input", function () {
 				expect(parser).toSucceed("X", "X");
@@ -21,7 +21,7 @@ describe("Parsing", function () {
 		});
 
 		describe("when parsing single character", function () {
-			var parser = parse.character("X");
+			var parser = parse.char("X");
 
 			it("should succeed with matching input", function () {
 				expect(parser).toSucceed("X", "X");
@@ -33,7 +33,7 @@ describe("Parsing", function () {
 		});
 
 		describe("when parsing single character specifying range", function () {
-			var parser = parse.character("XYZ");
+			var parser = parse.char("XYZ");
 
 			it("should succeed with matching input", function () {
 				expect(parser).toSucceed("X", "X");
@@ -46,7 +46,7 @@ describe("Parsing", function () {
 		});
 
 		describe("when parsing any character", function () {
-			var parser = parse.anyCharacter();
+			var parser = parse.anyChar();
 
 			it("should succeed with any character input", function () {
 				expect(parser).toSucceed("X", "X");
@@ -106,7 +106,7 @@ describe("Parsing", function () {
 		});
 
 		describe("when parsing using any from a sequence of parsers", function () {
-			var parser = parse.any(parse.character('a'), parse.character('b'), parse.character('c'));
+			var parser = parse.any(parse.char('a'), parse.char('b'), parse.char('c'));
 
 			it("should succeed with first parser", function () {
 				expect(parser).toSucceed("a", "a");
@@ -138,7 +138,7 @@ describe("Parsing", function () {
 		});
 
 		describe("when parsing using any from a sequence of parsers, specified as functions", function () {
-			var parser = parse.any(function () { return parse.character('a'); }, function () { return parse.character('b'); });
+			var parser = parse.any(function () { return parse.char('a'); }, function () { return parse.char('b'); });
 
 			it("should succeed with each parser", function () {
 				expect(parser).toSucceed("a", "a");
@@ -213,7 +213,7 @@ describe("Parsing", function () {
 			});
 
 			describe("when combining additional 2 parsers", function () {
-				var parser = parse.character('a').or(parse.character('b'), parse.character('c')).end();
+				var parser = parse.char('a').or(parse.char('b'), parse.char('c')).end();
 
 				it("should succeed when first matches", function () {
 					expect(parser).toSucceed("a", "a");
@@ -264,7 +264,7 @@ describe("Parsing", function () {
           .then(function (result) {
           	return parse.letter().map(function (letter) { return result.value + letter; });
           }).then(function (result) {
-          	return parse.character("_").map(function (letter) { return result.value + letter; });
+          	return parse.char("_").map(function (letter) { return result.value + letter; });
           }).end();
 
 				it("should succeed with expected input", function () {
@@ -278,7 +278,7 @@ describe("Parsing", function () {
 		describe("sequence", function () {
 
 			describe("when parsing using sequence of parsers", function () {
-				var parser = parse.sequence([parse.character("1"), parse.character("2"), parse.character("3")]);
+				var parser = parse.sequence([parse.char("1"), parse.char("2"), parse.char("3")]);
 
 				it("should succeed with expected input, with results in array", function () {
 					expect(parser).toSucceed("123", ["1", "2", "3"]);
@@ -296,7 +296,7 @@ describe("Parsing", function () {
 			});
 
 			describe("when parsing using sequence of parsers and projecting result from values", function () {
-				var parser = parse.sequence([parse.character("["), parse.digit(), parse.character("]")],
+				var parser = parse.sequence([parse.char("["), parse.digit(), parse.char("]")],
           function (opening, digit, closing) {
           	return digit;
           });
@@ -312,7 +312,7 @@ describe("Parsing", function () {
 		describe("name", function () {
 
 			describe("when naming parser", function () {
-				var parser = parse.sequence([parse.character("["), parse.digit(), parse.character("]")])
+				var parser = parse.sequence([parse.char("["), parse.digit(), parse.char("]")])
           .named("Array index");
 
 				it("should describe reason in expectations when parsing fails", function () {
@@ -347,7 +347,7 @@ describe("Parsing", function () {
 		describe("separated", function () {
 
 			describe("when parsing multiple elements excluding separators", function () {
-				var parser = parse.digit().separated(parse.character(','), { last: false, include: false });
+				var parser = parse.digit().separated(parse.char(','), { last: false, include: false });
 
 				it("should parse sequence of elements at start of input", function () {
 					expect(parser).toSucceed("1,2,3,4,5,XXX", ["1", "2", "3", "4", "5"]);
@@ -368,7 +368,7 @@ describe("Parsing", function () {
 			});
 
 			describe("when parsing multiple elements including separators", function () {
-				var parser = parse.digit().separated(parse.character(','), { last: false, include: true });
+				var parser = parse.digit().separated(parse.char(','), { last: false, include: true });
 
 				it("should parse sequence of elements at start of input omitting valid trailing separator", function () {
 					expect(parser).toSucceed("1,2,3,XXX", ["1", ",", "2", ",", "3"]);

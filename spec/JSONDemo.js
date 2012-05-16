@@ -18,29 +18,29 @@ describe("JSON Demo", function () {
 		// parses variable, property or function name
 		var identifier = parse.letter()
 			.then(function (firstResult) {
-				return parse.letter().or(parse.digit()).or(parse.character('_')).many().text()
+				return parse.letter().or(parse.digit()).or(parse.char('_')).many().text()
 				.map(function (rest) {
 					return firstResult.value + rest;
 				});
 			});
 
 		// parses escaped character sequence within a string - (Latin-1 \XXX \xXXX and unicode characters not supported, just a demo)
-		var escaped = parse.character('\\')
+		var escaped = parse.char('\\')
 			.then(function () {
-				return parse.character(function (c) {
+				return parse.char(function (c) {
 					return specialCharacters[c];
 				});
 			})
 			.map(function (c) { return specialCharacters[c]; });
 
-		var quotedString = parse.character('"\'')
+		var quotedString = parse.char('"\'')
 			.then(function (open) {
 				return escaped
-					.or(parse.characterExcept(open.value))
+					.or(parse.charExcept(open.value))
 					.many().text()
 					.then(function (textResult) {
 						// balance opening quote - TODO implement until
-						return parse.character(open.value).map(function (r) {
+						return parse.char(open.value).map(function (r) {
 							return textResult.value;
 						});
 					});
@@ -52,26 +52,26 @@ describe("JSON Demo", function () {
 
 		var property = parse.sequence([
 			identifier.or(quotedString).token(),
-			parse.character(":").token(),
+			parse.char(":").token(),
 			value.token()
 		], function (key, _, val) {
 			return { key: key, value: val };
 		}).named("property");
 
-		var properties = property.separated(parse.character(",").token());
+		var properties = property.separated(parse.char(",").token());
 
 		var array = parse.sequence([
-				parse.character("[").token(),
-				value.separated(parse.character(',').token()),
-				parse.character(']').token()
+				parse.char("[").token(),
+				value.separated(parse.char(',').token()),
+				parse.char(']').token()
 		], function (b1, values, b2) {
 			return values;
 		});
 
 		var object = parse.sequence([
-			parse.character("{").named('start of object "{"').token(),
+			parse.char("{").named('start of object "{"').token(),
 			properties,
-			parse.character("}").named('end of object "}"').token()
+			parse.char("}").named('end of object "}"').token()
 		], function (b1, props, b2) {
 			var result = {};
 			for (var i = 0, l = props.length; i < l; i++) {

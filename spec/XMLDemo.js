@@ -3,11 +3,11 @@ describe("XML Demo", function () {
 		var parse = Jasper.parse;
 
 		// valid node name
-		var identifier = parse.sequence([parse.letter().once(), parse.any(parse.letter(), parse.digit(), parse.character('_-')).many().text()]).text();
+		var identifier = parse.sequence([parse.letter().once(), parse.any(parse.letter(), parse.digit(), parse.char('_-')).many().text()]).text();
 
 		var ws = parse.whiteSpace().atLeastOnce();
 
-		var quotedContent = parse.sequence(['"', parse.characterExcept('"').many().text(), '"'], function (open, content, close) {
+		var quotedContent = parse.sequence(['"', parse.charExcept('"').many().text(), '"'], function (open, content, close) {
 			return content;
 		});
 
