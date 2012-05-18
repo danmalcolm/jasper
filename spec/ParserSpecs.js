@@ -2,6 +2,43 @@ describe("Parsing", function () {
 	var parse = Jasper.parse;
 	var process = Jasper.process;
 
+	describe("result", function () {
+
+		var numbers = parse.string("123456");
+		var newline = parse.char("\n");
+		var parser = parse.seq([numbers, newline, numbers, newline, numbers, newline], [0, 2, 4]);
+		var result;
+
+		it("should indicate success", function () {
+			result = process("123456\n123456\n123456\n", parser);
+			expect(result.success).toBeTruthy();
+			expect(result.value).toEqual(["123456", "123456", "123456"]);
+		});
+
+		describe("when parsing fails", function () {
+
+			beforeEach(function () {
+				result = process("123456\n123a456\n123456\n", parser);
+			});
+
+			it("failed input should specify position of unexpected input", function () {
+				expect(result.success).toBeFalsy();
+				expect(result.failedInput.at).toEqual(10);
+				expect(result.failedInput.line).toEqual(2);
+				expect(result.failedInput.column).toEqual(4);
+			});
+
+			it("result should indicate reason for failure and expectations", function () {
+				expect(result.reason()).toEqual('Unexpected character \'a\'');
+				expect(result.expectations()).toEqual(['the string "123456"']);
+			});
+
+		});
+
+
+	});
+
+
 	describe("parsers", function () {
 
 		describe("when parsing single character by predicate", function () {
@@ -251,6 +288,40 @@ describe("Parsing", function () {
 			});
 		});
 
+		describe("xor", function () {
+
+			describe("when combining with additional parser", function () {
+
+				it("should succeed when first matches", function () {
+					var parser = parse.char("a").atLeastOnce().text().xor(parse.char("b").atLeastOnce().text());
+					expect(parser).toSucceed("aa", "aa");
+				});
+
+				it("should succeed with second parser if first fails without consuming input", function () {
+					var parser = parse.char("a").atLeastOnce().text().xor(parse.char("b").atLeastOnce().text());
+					expect(parser).toSucceed("bb", "bb");
+				});
+
+				it("should fail if first fails and consumes input", function () {
+					var parser = parse.seq(["a", "b"]).xor(parse.char("a").once());
+					expect(parser).toFail("a");
+				});
+
+			});
+
+			describe("when combining with multiple parsers", function () {
+
+				it("should succeed when either matches if previous fail without consuming input", function () {
+					var parser = parse.char("a").atLeastOnce().text().xor(parse.char("b").atLeastOnce().text(), parse.char("c").atLeastOnce().text());
+					expect(parser).toSucceed("aa", "aa");
+					expect(parser).toSucceed("bb", "bb");
+					expect(parser).toSucceed("cc", "cc");
+				});
+
+			});
+
+		});
+
 		describe("then", function () {
 
 			describe("when combining values from 2 parsers", function () {
@@ -307,6 +378,10 @@ describe("Parsing", function () {
 					expect(parser).toSucceed("123", ["1", "2", "3"]);
 				});
 
+				it("should fail if sequence partially matched", function () {
+					expect(parser).toFail("1");
+				});
+
 			});
 
 			describe("when parsing using sequence of parsers and projecting result from values using function", function () {
@@ -322,7 +397,7 @@ describe("Parsing", function () {
 			});
 
 			describe("when parsing using sequence of parsers and selecting single result from values using index", function () {
-				var parser = parse.sequence([parse.char("["),parse.digit(),parse.char("]")], 1);
+				var parser = parse.sequence([parse.char("["), parse.digit(), parse.char("]")], 1);
 
 				it("should succeed with expected input, with projected result", function () {
 					expect(parser).toSucceed("[3]", "3");
@@ -331,7 +406,7 @@ describe("Parsing", function () {
 			});
 
 			describe("when parsing using sequence of parsers and selecting subset of values using array of indices", function () {
-				var parser = parse.sequence([parse.char("["), parse.digit(), parse.char("]")], [1,2]);
+				var parser = parse.sequence([parse.char("["), parse.digit(), parse.char("]")], [1, 2]);
 
 				it("should succeed with expected input, with projected result", function () {
 					expect(parser).toSucceed("[3]", ["3", "]"]);
@@ -530,7 +605,7 @@ describe("Parsing", function () {
 				});
 
 				it("should fail with invalid input, giving expected string as expectation", function () {
-					expect(parser).toFailWithReason("XXX", null, "class");
+					expect(parser).toFailWithReason("XXX", null, 'the string "class"');
 				});
 			});
 

@@ -46,10 +46,12 @@ describe("JSON Demo", function () {
 
 		var number = parse.number().map(function (s) { return Number(s); });
 
-		var value = parse.any(quotedString, number, parse.ref(function () { return object; }), parse.ref(function () { return array; }));
+		var bool = parse.xany(parse.string('true'), parse.string('false')).map(function(val) { return val === 'true'; });
 
-		var key = identifier.or(quotedString).token();
-		
+		var value = parse.xany(quotedString, number, bool, parse.ref(function () { return object; }), parse.ref(function () { return array; }));
+
+		var key = identifier.xor(quotedString).token();
+
 		var property = parse.seq([
 			key,
 			parse.char(":").token(),
@@ -60,10 +62,10 @@ describe("JSON Demo", function () {
 
 		var properties = property.separated(parse.char(",").token());
 
-		var array = parse.sequence([
-				parse.char("[").token(),
+		var array = parse.seq([
+				parse.char("[").named('start of array "["').token(),
 				value.separated(parse.char(',').token()),
-				parse.char(']').token()
+				parse.char(']').named('end of array "["').token()
 		], 1);
 
 		var object = parse.seq([
@@ -131,16 +133,21 @@ describe("JSON Demo", function () {
 
 		describe("big", function () {
 
-			it("string values", function () {
+			it("large JSON structure", function () {
 				var res = Jasper.process(demoData.soQuestions, parser);
-				console.log(JSON.stringify(res));
-				console.log(res.getMessage());
-				console.log(res.getExpectations());
+				console.log(res.message());
 				expect(res.success).toBeTruthy();
-				expect(res.value.items.length).toEqual(50);
+				expect(res.value.items.length).toEqual(30);
+			});
+			
+			it("large JSON structure using JSON.parse", function () {
+				var value = JSON.parse(demoData.soQuestions);
+				expect(value.items.length).toEqual(30);
 			});
 
 		});
+
+		
 	});
 
 });

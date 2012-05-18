@@ -11,7 +11,7 @@ beforeEach(function () {
 				var message = "Expected to succeed parsing input "
             + f(text) + " with value " + f(expectedValue) + " but result was: " + f(result);
 				if (!result.success) {
-					message += ". Message: " + result.message() + ", Expectations: " + result.expectations();
+					message += ".\nMessage:\n" + result.message();
 				}
 				return message;
 			};
@@ -26,30 +26,30 @@ beforeEach(function () {
 			};
 			return !result.success;
 		},
-		toFailWithReason: function (text, expectedMessage, expectedExpectations) {
+		toFailWithReason: function (text, expectedReason, expectedExpectations) {
 			var parser = this.actual;
 			var result = process(text, parser);
-			var actualMessage = "", actualExpectations = "";
+			var actualReason = "", actualExpectations = "";
 			if (!result.success) {
-				actualMessage = result.message();
+				actualReason = result.reason();
 				actualExpectations = result.expectations();
 			}
 			this.message = function () {
 				var message = "Expected to fail";
-				if (expectedMessage) {
-					message += " with message " + f(expectedMessage);
+				if (expectedReason) {
+					message += " with reason " + f(expectedReason);
 				}
 				if (expectedExpectations) {
-					message += (expectedMessage ? " and" : " with");
+					message += (expectedReason ? " and" : " with");
 					message += "expectations " + f(expectedExpectations);
 				}
 				message += " when parsing input " + f(text) + " but result was: "
-            + f(result) + " with message " + f(actualMessage)
+            + f(result) + " with message " + f(actualReason)
             + " and expectations: " + f(actualExpectations);
 				return message;
 			};
 			return !result.success
-          && (!expectedMessage || actualMessage == expectedMessage)
+          && (!expectedReason || actualReason == expectedReason)
           && (!expectedExpectations || actualExpectations == expectedExpectations);
 		},
 		toContainOnly: function (models) {
