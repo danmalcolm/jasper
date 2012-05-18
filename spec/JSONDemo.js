@@ -48,12 +48,14 @@ describe("JSON Demo", function () {
 
 		var value = parse.any(quotedString, number, parse.ref(function () { return object; }), parse.ref(function () { return array; }));
 
+		var key = identifier.or(quotedString).token();
+		
 		var property = parse.seq([
-			identifier.or(quotedString).token(),
+			key,
 			parse.char(":").token(),
 			value.token()
-		], function (key, _, val) {
-			return { key: key, value: val };
+		], function (k, _, v) {
+			return { key: k, value: v };
 		}).named("property");
 
 		var properties = property.separated(parse.char(",").token());
@@ -68,7 +70,7 @@ describe("JSON Demo", function () {
 			parse.char("{").named('start of object "{"').token(),
 			properties,
 			parse.char("}").named('end of object "}"').token()
-		], function (b1, props, b2) {
+		], function (start, props, end) {
 			var result = {};
 			for (var i = 0, l = props.length; i < l; i++) {
 				result[props[i].key] = props[i].value;
@@ -77,7 +79,7 @@ describe("JSON Demo", function () {
 		});
 
 		// Parse root object or array
-		return object.or(array);
+		return object; //.or(array);
 	})();
 
 	describe("JSON", function () {
@@ -124,6 +126,19 @@ describe("JSON Demo", function () {
 				expect(parser).toSucceed('{  }', {});
 			});
 
+
+		});
+
+		describe("big", function () {
+
+			it("string values", function () {
+				var res = Jasper.process(demoData.soQuestions, parser);
+				console.log(JSON.stringify(res));
+				console.log(res.getMessage());
+				console.log(res.getExpectations());
+				expect(res.success).toBeTruthy();
+				expect(res.value.items.length).toEqual(50);
+			});
 
 		});
 	});

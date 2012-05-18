@@ -174,8 +174,19 @@ var Jasper = (function () {
 			var parser = this;
 			for (var i = 0, l = arguments.length; i < l; i++) {
 				parser = (function (other) {
-					return parser.combine(function (input, result) {
-						return result.success ? result : other.parse(input);
+					return parser.combine(function (input, result1) {
+						if (result1.success) {
+							return result1;
+						} else {
+							var result2 = other.parse(input);
+							if (!result2.success) {
+								return fail(result1.input, null, function () {
+									return [].concat(result1.getExpectations(), result2.getExpectations());
+								});
+							} else {
+								return result2;
+							}
+						}
 					});
 				})(getParser(arguments[i]));
 			}
@@ -518,7 +529,7 @@ var Jasper = (function () {
 
 	// Aliases
 
-	// Uses a function to provide a reference to the parser
+	// Better name for scenarios where using is used to reference another parser
 	parse.ref = parse.using;
 	parse.seq = parse.sequence;
 
