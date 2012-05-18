@@ -143,9 +143,6 @@ var Jasper = (function () {
 	};
 
 	var fail = function (input, reason, expectations) {
-//		var result = new Failure(input, reason, expectations);
-//		console.log(result.message());
-//		return result;
 		return new Failure(input,reason,expectations);
 	};
 

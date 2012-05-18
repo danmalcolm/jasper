@@ -46,7 +46,7 @@ describe("JSON Demo", function () {
 
 		var number = parse.number().map(function (s) { return Number(s); });
 
-		var bool = parse.xany(parse.string('true'), parse.string('false')).map(function(val) { return val === 'true'; });
+		var bool = parse.xany(parse.string('true'), parse.string('false')).map(function (val) { return val === 'true'; });
 
 		var value = parse.xany(quotedString, number, bool, parse.ref(function () { return object; }), parse.ref(function () { return array; }));
 
@@ -134,20 +134,24 @@ describe("JSON Demo", function () {
 		describe("big", function () {
 
 			it("large JSON structure", function () {
+				console.time('large JSON parse - jasper');
 				var res = Jasper.process(demoData.soQuestions, parser);
+				console.timeEnd('large JSON parse - jasper');
 				console.log(res.message());
 				expect(res.success).toBeTruthy();
 				expect(res.value.items.length).toEqual(30);
 			});
-			
+
 			it("large JSON structure using JSON.parse", function () {
+				console.time('large JSON parse - JSON.parse');
 				var value = JSON.parse(demoData.soQuestions);
+				console.timeEnd('large JSON parse - JSON.parse');
 				expect(value.items.length).toEqual(30);
 			});
 
 		});
 
-		
+
 	});
 
 });
