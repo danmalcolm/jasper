@@ -76,9 +76,11 @@ var Jasper = (function () {
 	};
 
 	// Contains text being parsed and position within it	
-	var Input = function (text, at) {
+	var Input = function (text, at, line, column) {
 		this.text = text;
 		this.at = at || 0;
+		this.line = line || 1;
+		this.column = column || 1;
 		this.current = this.text.charAt(at);
 		this.atEnd = (this.at === this.text.length);
 	};
@@ -86,53 +88,65 @@ var Jasper = (function () {
 		next: function () {
 			if (this.atEnd)
 				throw new Error("Cannot advance beyond end of text");
-			return new Input(this.text, this.at + 1);
+			var newLine = this.current === '\n';
+			var at = this.at + 1;
+			var line = newLine ? this.line + 1 : this.line;
+			var column = newLine ? 1 : this.column + 1;
+			return new Input(this.text, at, line, column);
+		},
+		// shows the current line following by another line with a caret indicating the current position 
+		visualSummary: function () {
+			var line = this.text.split('\n')[this.line - 1];
+			var indicator = new Array(this.column).join('-') + '^';
+			return line + '\n' + indicator;
 		}
 	});
 
 	// Results - contain outcome of parsing
-	var Result = function () {
+	var ifSuccess = function (result, fn) {
+		return result.success ? fn(result) : result;
 	};
-	ext(Result.prototype, {
-		ifSuccess: function (func) {
-			return this.success ? func(this) : this;
-		},
-		ifFailure: function (func) {
-			return !this.success ? func(this) : this;
-		}
-	});
-
+	var ifFailure = function (result, fn) {
+		return !result.success ? fn(result) : result;
+	};
 	var Success = function (remaining, value) {
 		this.remaining = remaining;
 		this.success = true;
 		this.value = value;
 	};
-	Success.prototype = new Result();
-	Success.prototype.constructor = Success;
+	ext(Success.prototype, {
+		message: function () {
+			return 'Parsing succeeded:\n' + this.value;
+		}
+	});
 
 	// Result when input does not match parser
-	var Failure = function (input, getMessage, getExpectations) {
+	var Failure = function (input, reason, expectations) {
 		this.failedInput = input;
 		this.success = false;
-		// message and expectations are created lazily
-		this.getMessage = getMessage;
-		this.getExpectations = getExpectations;
+		// reason and expectations are created lazily
+		this.reason = reason;
+		this.expectations = expectations;
 	};
-	Failure.prototype = new Result();
-	Failure.prototype.constructor = Failure;
-	Failure.prototype.message = function () {
-		return this.getMessage ? this.getMessage() : "Not specified";
-	};
-	Failure.prototype.expectations = function () {
-		return this.getExpectations ? this.getExpectations().join(" or ") : "Not specified";
-	};
+	ext(Failure.prototype, {
+		expectationsSummary: function () {
+			return this.expectations ? this.expectations().join(" or ") : "Not specified";
+		},
+		message: function () {
+			var input = this.failedInput;
+			return 'Parsing failed - ' + this.reason() + ' at line ' + input.line + ', column: ' + input.column + ':\n' + this.failedInput.visualSummary() + '\nExpected: ' + this.expectations();
+		}
+	});
 
 	var succeed = function (value, remaining) {
 		return new Success(remaining, value);
 	};
 
-	var fail = function (input, getMessage, getExpectations) {
-		return new Failure(input, getMessage, getExpectations);
+	var fail = function (input, reason, expectations) {
+//		var result = new Failure(input, reason, expectations);
+//		console.log(result.message());
+//		return result;
+		return new Failure(input,reason,expectations);
 	};
 
 	// Parser - provides a container for core parse function, using prototypal inheritance to attach combinators
@@ -157,12 +171,12 @@ var Jasper = (function () {
 		// then, if successful, performs further parsing with a new parser function
 		combineIfSuccess: function (callback) {
 			return this.combine(function (input, result) {
-				return result.ifSuccess(callback);
+				return ifSuccess(result, callback);
 			});
 		},
 		map: function (map) {
 			return this.combine(function (input, result) {
-				return result.ifSuccess(function (r) {
+				return ifSuccess(result, function (r) {
 					var mappedValue = map(r.value);
 					return succeed(mappedValue, r.remaining);
 				});
@@ -180,10 +194,43 @@ var Jasper = (function () {
 						} else {
 							var result2 = other.parse(input);
 							if (!result2.success) {
-								return fail(result1.input, null, function () {
-									return [].concat(result1.getExpectations(), result2.getExpectations());
+								return fail(result1.failedInput, result1.reason,
+								function () {
+									return [].concat(result1.expectations(), result2.expectations());
 								});
 							} else {
+								return result2;
+							}
+						}
+					});
+				})(getParser(arguments[i]));
+			}
+			return parser;
+		},
+		// Attempts to parse using the current parser and, if it fails,
+		// tries each additional parser argument in turn. The first parsed 
+		// character will determine the parser chosen. If any  parser 
+		// fails after consuming input, the other parsers will not attempt to parse. 
+		xor: function () {
+			var parser = this;
+			for (var i = 0, l = arguments.length; i < l; i++) {
+				parser = (function (other) {
+					return parser.combine(function (input, result1) {
+						if (result1.success) {
+							return result1;
+						}
+						else if (result1.failedInput !== input) {
+							return result1;
+						}
+						else {
+							var result2 = other.parse(input);
+							if (!result2.success) {
+								return fail(result1.failedInput, result1.reason,
+								function () {
+									return [].concat(result1.expectations(), result2.expectations());
+								});
+							}
+							else {
 								return result2;
 							}
 						}
@@ -198,29 +245,7 @@ var Jasper = (function () {
 		optional: function (val) {
 			return this.or(parse.ret(val));
 		},
-		// Attempts to parse using the current parser and, if it fails,
-		// tries the other. The first parsed character will determine the
-		// parser chosen. If the current parser fails after consuming input,
-		// the other parser will not be tried.
-		xor: function (other) {
-			return this.combine(function (input, result1) {
-				if (result1.success) {
-					return result1;
-				}
-				else if (result1.remaining != input) {
-					return result1;
-				}
-				else {
-					var result2 = other.parse(input);
-					if (!result2.success) {
-						return fail(result1.input, null, function () {
-							return result1.getExpectations(); // concat
-						});
-					}
-				}
-				return result.success ? result : other.parse(input);
-			});
-		},
+
 		// Parses the end of the input, failing if not at end
 		end: function () {
 			return this.combineIfSuccess(function (result) {
@@ -242,8 +267,8 @@ var Jasper = (function () {
 			var parser = this;
 			return createParser(function (input) {
 				var result = parser.parse(input);
-				return result.ifFailure(function () {
-					return fail(result.failedInput, result.getMessage, function () {
+				return ifFailure(result, function () {
+					return fail(result.failedInput, result.reason, function () {
 						return [name];
 					});
 				});
@@ -368,11 +393,13 @@ var Jasper = (function () {
 						function () { return "Did not expect to be at end of input"; },
 						function () { return [expectation]; });
 				}
-				return predicate(input.current)
-				? succeed(input.current, input.next())
-				: fail(input,
-					function () { return "Unexpected character '" + input.current + "'"; },
-					function () { return [expectation]; });
+				if (predicate(input.current)) {
+					return succeed(input.current, input.next());
+				} else {
+					return fail(input,
+						function () { return "Unexpected character '" + input.current + "'"; },
+						function () { return [expectation]; });
+				}
 			});
 		},
 		anyChar: function () {
@@ -395,7 +422,7 @@ var Jasper = (function () {
 		letter: function () {
 			return parse.char(function (c) {
 				return charUtil.isUpper(c) || charUtil.isLower(c);
-			});
+			}, 'a letter');
 		},
 		lower: function () {
 			return parse.char(charUtil.isLower);
@@ -404,7 +431,7 @@ var Jasper = (function () {
 			return parse.char(charUtil.isUpper);
 		},
 		digit: function () {
-			return parse.char(charUtil.isDigit);
+			return parse.char(charUtil.isDigit, 'a digit');
 		},
 		whiteSpace: function () {
 			return parse.char(charUtil.isWhiteSpace);
@@ -420,7 +447,7 @@ var Jasper = (function () {
 					});
 				})(i);
 			}
-			parser = parser.named(str);
+			parser = parser.named('the string "' + str + '"');
 			return parser;
 		},
 		// Parses a whole number
@@ -461,6 +488,15 @@ var Jasper = (function () {
 			var parser = getParser(arguments[0]);
 			return parser.or.apply(parser, slice.call(arguments, 1));
 		},
+		// Attempts to parse using any of the parsers, trying one at a time in the order supplied,
+		// the first parser to consume input will be used
+		xany: function () {
+			if (arguments.length === 0) {
+				throw new Error("At least one argument expected");
+			}
+			var parser = getParser(arguments[0]);
+			return parser.xor.apply(parser, slice.call(arguments, 1));
+		},
 		// Executes a sequence of parsers, The optional map argument can be either:
 		// - a function that is called to get the resulting value. It will be called with
 		// the result of each parser in the sequence, each as a separate argument
@@ -470,6 +506,9 @@ var Jasper = (function () {
 		// an array containing the values returned by these parses
 		sequence: function (parsers, map) {
 			var parser, current, i, l;
+			if (!is.array(parsers)) {
+				throw new Error("parsers arg should be an array");
+			}
 			for (i = 0, l = parsers.length; i < l; i++) {
 				current = getParser(parsers[i]);
 				if (!parser) {
